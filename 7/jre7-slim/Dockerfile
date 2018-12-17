@@ -15,7 +15,7 @@ ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:}$TOMCAT_NATIVE_LIBDIR
 # > configure: error: Your version of OpenSSL is not compatible with this version of tcnative
 # see http://tomcat.10.x6.nabble.com/VOTE-Release-Apache-Tomcat-8-0-32-tp5046007p5046024.html (and following discussion)
 # and https://github.com/docker-library/tomcat/pull/31
-ENV OPENSSL_VERSION 1.1.0f-3+deb9u2
+ENV OPENSSL_VERSION 1.1.0j-1~deb9u1
 RUN set -ex; \
 	currentVersion="$(dpkg-query --show --showformat '${Version}\n' openssl)"; \
 	if dpkg --compare-versions "$currentVersion" '<<' "$OPENSSL_VERSION"; then \
@@ -52,8 +52,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV GPG_KEYS 05AB33110949707C93A279E3D3EFE6B686867BA6 07E48665A34DCAFAE522E5E6266191C37C037D42 47309207D818FFD8DCD3F83F1931D684307A10A5 541FBE7D8F78B25E055DDEE13C370389288584E7 61B832AC2F1C5A90F0F9B00A1C506407564C17A3 713DA88BE50911535FE716F5208B0AB1D63011C7 79F7026C690BAA50B92CD8B66A3AD3F4F22C4FED 9BA44C2621385CB966EBA586F72C284D731FABEE A27677289986DB50844682F8ACB77FC2E86E29AC A9C5DF4D22E99998D9875A5110C01C5A2F6059E7 DCFD35E0BF8CA7344752DE8B6FB21E8933C60243 F3A04C595DB5B6A5F1ECA43E3B7BBB100D811BBE F7DA48BB64BCB84ECBA7EE6935CD23C10D498E23
 
 ENV TOMCAT_MAJOR 7
-ENV TOMCAT_VERSION 7.0.86
-ENV TOMCAT_SHA512 75a9f801e507c610d6ed7b29efe21e6c6fb7d2e3d3ffff644cde660a7358232062e6cc807c7a377e9466526af73282cfc806d7c9d64adbc42b6c2fc54bea6847
+ENV TOMCAT_VERSION 7.0.92
+ENV TOMCAT_SHA512 e5e17ea68956df5d4c220f2e2891953b362b4fadd391f7cb9bc00d86986aa2e2499176d59c393f41db9ab3e0d7f1ab492a881f85c6650514a7f02f047d4eb2b0
 
 ENV TOMCAT_TGZ_URLS \
 # https://issues.apache.org/jira/browse/INFRA-8753?focusedCommentId=14735394#comment-14735394
@@ -79,7 +79,7 @@ RUN set -eux; \
 	\
 	export GNUPGHOME="$(mktemp -d)"; \
 	for key in $GPG_KEYS; do \
-		gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
+		gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$key"; \
 	done; \
 	\
 	apt-get install -y --no-install-recommends wget ca-certificates; \
@@ -108,6 +108,7 @@ RUN set -eux; \
 	tar -xvf tomcat.tar.gz --strip-components=1; \
 	rm bin/*.bat; \
 	rm tomcat.tar.gz*; \
+	command -v gpgconf && gpgconf --kill all || :; \
 	rm -rf "$GNUPGHOME"; \
 	\
 	nativeBuildDir="$(mktemp -d)"; \
@@ -145,7 +146,12 @@ RUN set -eux; \
 	\
 # sh removes env vars it doesn't support (ones with periods)
 # https://github.com/docker-library/tomcat/issues/77
-	find ./bin/ -name '*.sh' -exec sed -ri 's|^#!/bin/sh$|#!/usr/bin/env bash|' '{}' +
+	find ./bin/ -name '*.sh' -exec sed -ri 's|^#!/bin/sh$|#!/usr/bin/env bash|' '{}' +; \
+	\
+# fix permissions (especially for running as non-root)
+# https://github.com/docker-library/tomcat/issues/35
+	chmod -R +rX .; \
+	chmod 777 logs work
 
 # verify Tomcat Native is working properly
 RUN set -e \

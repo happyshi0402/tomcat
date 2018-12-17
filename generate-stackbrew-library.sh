@@ -5,7 +5,7 @@ declare -A latestVariant=(
 	[7]='jre7'
 	[8.0]='jre7'
 	[8.5]='jre8'
-	[9.0]='jre9'
+	[9.0]='jre10'
 )
 declare -A aliases=(
 	[8.5]='8 latest'
@@ -72,7 +72,7 @@ join() {
 }
 
 for version in "${versions[@]}"; do
-	for variant in jre{7,8,9,10}{,-{slim,alpine}}; do
+	for variant in jre{7,8,9,10,11,12}{,-{slim,alpine}}; do
 		[ -f "$version/$variant/Dockerfile" ] || continue
 
 		commit="$(dirCommit "$version/$variant")"
